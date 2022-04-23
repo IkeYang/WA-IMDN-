@@ -377,8 +377,8 @@ if __name__=='__main__':
 
     hyperParaTrain={'preTrain':False,'printOut':False,'n':3,'Maxepochs':1000 ,
                     'varPun': 0.01, 'tanhK': 10}
-    trainWAIMDN_GMM(deviceNum=0,hyperParaTrain=hyperParaTrain,hyperParaModel=None,criterion=None)
-    trainWAIMDN_Beta(deviceNum=0,hyperParaTrain=hyperParaTrain,hyperParaModel=None,criterion=None)
+    trainWAIMDN_GMM(nameInput='TestGMM',wtNum=0,wfnum=4,deviceNum=0,hyperParaTrain=hyperParaTrain,hyperParaModel=None,criterion=None)
+    trainWAIMDN_Beta(nameInput='TestBMM',wtNum=0,wfnum=4,deviceNum=0,hyperParaTrain=hyperParaTrain,hyperParaModel=None,criterion=None)
 
 
 
