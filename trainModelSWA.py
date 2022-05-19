@@ -13,7 +13,7 @@ import torch.autograd as autograd
 import sys
 sys.path.append("..")
 sys.path.append("../../../../..")
-from utlize import loadFromDict,SCADADataset,torchBetaF
+from utlize import loadFromDict,SCADADataset,torchBetaF,GMMloss
 from utlize import BetaInverseCDF_Reparameter as BetaInverseCDF
 
 def compute_gradient_penalty( real_samples, fake_samples, labels,cuda=True):
@@ -118,8 +118,18 @@ def trainWAIMDN_GMM(deviceNum,nameInput,wtNum,wfnum,checkpoint=None,
 
 
     if criterion is None:
-        def PunVarFun(fake_loss,w,mu,logstd):
+        def PunVarFun(fake_loss,w,mu,logstd,y=None):
             return -torch.mean(fake_loss) - varPun* torch.mean(torch.min(logstd, dim=-1)[0])
+            #sometimes you can also punish mu and add additional auxiliary loss
+            #ind = torch.argsort(w, dim=-1)[:, -2:]
+            #wloss = torch.mean(torch.clamp(torch.var(w[ind], dim=-1)[0]-0.06,min=0))
+            #mu = mu[ind]
+            #muloss = torch.mean(torch.clamp(torch.sqrt((mu[:, 0]-mu[:, 1])**2),max=0.5))
+            # muloss = torch.mean(torch.sqrt((mu[:, 0]-mu[:, 1])**2))
+            # return -torch.mean(fake_loss) - varPun * torch.mean(torch.min(logstd, dim=-1)[0])\
+            #  +wloss-muloss+GMMloss(y,w,mu,logstd,device)
+        
+            
         criterion=PunVarFun
 
     for epoch in range(Maxepochs):
