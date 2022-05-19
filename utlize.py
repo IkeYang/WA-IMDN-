@@ -3,7 +3,8 @@ import numpy as np
 from torch.utils.data import Dataset
 
 import torch
-
+from einops import rearrange
+warnings.filterwarnings('ignore')
 
 def getDataSet():
     '''
@@ -80,5 +81,43 @@ class BetaInverseCDF_Reparameter():
         x2 = torch.exp(eps * torch.sqrt(1 / beta + 1 / (beta ** 2) / 2) + torch.log(beta) - 1 / (2 * beta))
         x3=x1/(x1+x2)
         return x3
-
+def GMMloss(y,yPw,yPmu,yPlogvar,device,numberWT=1):
+    if numberWT==1:
+        n=yPw.shape[1]
+        yPw = F.softmax(yPw, dim=-1)
+        Psqvar = torch.exp(yPlogvar)
+        # factor = 1 / math.sqrt(2 * math.pi)
+        factor = 0.3989
+        epsilon = torch.tensor(1e-5).to(device)
+        loss = 0
+        for nGmm in range(n):
+            pmu = yPmu[:, nGmm].view(-1, 1)
+            psqvar = Psqvar[:, nGmm].view(-1, 1) + epsilon
+            pw = yPw[:, nGmm].view(-1, 1)
+            temp = -(y - pmu) ** 2 / 2 / psqvar ** 2
+            # prob=factor/psqvar*torch.exp(temp)
+            # probwi=pw*prob
+            loss += pw * factor / psqvar * torch.exp(temp)
+        loss = torch.sum(-torch.log(loss + 1e-7))
+        return loss
+    else:
+        y = rearrange(y, 'b s wt-> b wt s')
+        n = yPw.shape[1]
+        bs = yPw.shape[0]
+        yPw = F.softmax(yPw, dim=-1)
+        Psqvar = torch.exp(yPlogvar)
+        # factor = 1 / math.sqrt(2 * math.pi)
+        factor = 0.3989
+        epsilon = torch.tensor(1e-5).to(device)
+        loss = 0
+        # loss += torch.sum(torch.log(yPw))
+        # loss -= torch.sum(yPlogvar)
+        for nGmm in range(n):
+            xmu = (y - yPmu[:, :, nGmm].view(bs, -1, 1)) / (Psqvar[:, :, nGmm]**2).view(bs, -1, 1)
+            up=torch.exp(-0.5*torch.norm(xmu,p=2,dim=-1)**2)
+            down=torch.prod(Psqvar[:, :, nGmm].view(bs, -1, 1),dim=-1)+epsilon
+            
+            loss+=yPw[:, nGmm].view(-1, 1)*factor*(up/(down))
+        loss = torch.sum(-torch.log(loss + 1e-7))
+    return loss
 
